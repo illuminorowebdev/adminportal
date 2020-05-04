@@ -1,25 +1,17 @@
 /* eslint-disable react/no-multi-comp */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useLocation, matchPath } from 'react-router';
-import { Link as RouterLink } from 'react-router-dom';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
-import { useSelector } from 'react-redux';
 import { makeStyles } from '@material-ui/styles';
 import {
   Drawer,
   Divider,
-  Avatar,
   List,
   ListSubheader,
-  Typography,
   Hidden,
-  IconButton,
-  Badge,
-  Link,
   colors,
 } from '@material-ui/core';
-import MoreIcon from '@material-ui/icons/MoreVert';
 import { NavItem } from 'components';
 import navConfig from './navConfig';
 
@@ -46,30 +38,6 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(2),
     display: 'flex',
     alignItems: 'center',
-  },
-  badge: {
-    boxShadow: `0 0 0 2px ${theme.palette.background.paper}`,
-  },
-  badgeDot: {
-    height: 9,
-    minWidth: 9,
-  },
-  onlineBadge: {
-    backgroundColor: colors.green[600],
-  },
-  awayBadge: {
-    backgroundColor: colors.orange[600],
-  },
-  busyBadge: {
-    backgroundColor: colors.red[600],
-  },
-  offlineBadge: {
-    backgroundColor: colors.grey[300],
-  },
-  avatar: {
-    cursor: 'pointer',
-    width: 40,
-    height: 40,
   },
   details: {
     marginLeft: theme.spacing(2),

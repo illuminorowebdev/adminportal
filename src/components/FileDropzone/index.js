@@ -11,6 +11,8 @@ import {
   ListItemText,
   Typography,
   colors,
+  Tooltip,
+  IconButton,
 } from '@material-ui/core';
 import FileCopyIcon from '@material-ui/icons/FileCopy';
 import bytesToSize from 'utils/bytesToSize';
@@ -18,6 +20,7 @@ import BackupIcon from '@material-ui/icons/Backup';
 import { getFileTypeFromKey, getFileNameFromKey } from 'utils/utils';
 import config from 'config';
 import ReactPlayer from 'react-player';
+import GetAppIcon from '@material-ui/icons/GetApp';
 
 const useStyles = makeStyles((theme) => ({
   root: { border: `1px dashed ${theme.palette.divider}` },
@@ -76,7 +79,14 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-function FileDropzone({ className, file, setFile, acceptRule, ...rest }) {
+function FileDropzone({
+  className,
+  file,
+  setFile,
+  acceptRule,
+  downloadSource,
+  ...rest
+}) {
   const classes = useStyles();
 
   const handleDrop = useCallback((acceptedFiles) => {
@@ -123,7 +133,6 @@ function FileDropzone({ className, file, setFile, acceptRule, ...rest }) {
           <ReactPlayer
             url={config.AWS_S3_URL + key}
             controls
-            playing
             className={classes.player}
           />
           <ListItem>
@@ -141,7 +150,11 @@ function FileDropzone({ className, file, setFile, acceptRule, ...rest }) {
     return (
       <ListItem>
         <ListItemIcon>
-          <FileCopyIcon />
+          <Tooltip title="Click to download source file">
+            <IconButton onClick={() => downloadSource(key)}>
+              <GetAppIcon />
+            </IconButton>
+          </Tooltip>
         </ListItemIcon>
         <ListItemText
           primary={getFileNameFromKey(key)}
@@ -210,6 +223,14 @@ function FileDropzone({ className, file, setFile, acceptRule, ...rest }) {
 
 FileDropzone.propTypes = {
   className: PropTypes.string,
+  downloadSource: PropTypes.func,
+  file: PropTypes.any,
+  setFile: PropTypes.func.isRequired,
+  acceptRule: PropTypes.string,
+};
+
+FileDropzone.defaultProps = {
+  downloadSource: () => {},
 };
 
 export default FileDropzone;

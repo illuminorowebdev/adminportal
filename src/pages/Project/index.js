@@ -201,6 +201,21 @@ const Project = () => {
     }));
   };
 
+  const downloadSource = (key) => {
+    dispatch(setLoading(true));
+    API.createPublicSignedUrls({
+      data: [key],
+    })
+      .then((res) => {
+        dispatch(setLoading(false));
+        window.open(res[0]);
+      })
+      .catch((err) => {
+        NotificationManager.warning(err.message);
+        dispatch(setLoading(false));
+      });
+  };
+
   const hasError = (field) =>
     !!(formState.touched[field] && formState.errors[field]);
 
@@ -309,6 +324,7 @@ const Project = () => {
                   acceptRule=".zip,.rar"
                   file={formState.values.source}
                   setFile={fileChange('source')}
+                  downloadSource={downloadSource}
                 />
               </FormGroup>
               {hasError('source') && (

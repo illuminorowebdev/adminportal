@@ -7,6 +7,7 @@ const apiEndPoints = {
   signout: 'auth/sign-out',
   projects: 'projects/',
   createProjectsPresignedUrls: 'projects/presigned-urls',
+  createPublicSignedUrls: 'projects/public-s3-urls',
 };
 
 export const signin = (body) =>
@@ -95,6 +96,20 @@ export const getProject = (id) =>
 export const updateProduct = (id, payload) =>
   new Promise((resolve, reject) => {
     patchData(apiEndPoints.projects + id, payload)
+      .then((res) => resolve(res.data))
+      .catch((err) => reject(err));
+  });
+
+export const removeProduct = (id) =>
+  new Promise((resolve, reject) => {
+    deleteData(apiEndPoints.projects + id)
+      .then((res) => resolve(res.data))
+      .catch((err) => reject(err));
+  });
+
+export const createPublicSignedUrls = (payload) =>
+  new Promise((resolve, reject) => {
+    postData(apiEndPoints.createPublicSignedUrls, payload)
       .then((res) => resolve(res.data))
       .catch((err) => reject(err));
   });
