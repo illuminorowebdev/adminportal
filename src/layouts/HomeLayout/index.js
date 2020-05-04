@@ -9,7 +9,7 @@ import { loggedInSelector } from 'redux/selectors/auth';
 import { useSelector, useDispatch } from 'react-redux';
 import { refreshApp } from 'redux/actions/app';
 import { GlobalLoader } from 'components';
-import { appProfileSelector } from 'redux/selectors/app';
+import { appProfileSelector, appLoadingSelector } from 'redux/selectors/app';
 import { Redirect } from 'react-router-dom';
 
 const useStyles = makeStyles((theme) => ({
@@ -39,6 +39,7 @@ function HomeLayout({ route }) {
   const [openNavBarMobile, setOpenNavBarMobile] = useState(false);
 
   const isLoggedIn = useSelector(loggedInSelector);
+  const isLoading = useSelector(appLoadingSelector);
   const profile = useSelector(appProfileSelector);
   const dispatch = useDispatch();
 
@@ -65,6 +66,7 @@ function HomeLayout({ route }) {
           </Suspense>
         </div>
       </div>
+      {isLoading && <GlobalLoader />}
     </>
   );
 }

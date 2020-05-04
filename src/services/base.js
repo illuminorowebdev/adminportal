@@ -1,6 +1,7 @@
 import axiosInstance from './axios';
 
-export const getData = endPoint => axiosInstance.get(endPoint);
+export const getData = (endPoint, payload = {}) =>
+  axiosInstance.get(endPoint, payload);
 
 export const postData = (endPoint, body, headers) =>
   axiosInstance.post(endPoint, body, { headers });

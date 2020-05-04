@@ -23,6 +23,10 @@ const Projects = () => {
   const dispatch = useDispatch();
   const router = useRouter();
 
+  useEffect(() => {
+    // load
+  }, []);
+
   const onNew = () => {
     router.history.push('/projects/create');
   };

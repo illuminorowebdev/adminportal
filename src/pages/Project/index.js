@@ -1,12 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   makeStyles,
-  Paper,
   TextField,
   Button,
-  IconButton,
   Typography,
-  Divider,
   Card,
   CardContent,
   FormControl,
@@ -14,15 +11,24 @@ import {
   FormGroup,
   FormHelperText,
 } from '@material-ui/core';
-import { useSelector, useDispatch } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { Page, FileDropzone } from 'components';
 import useRouter from 'utils/useRouter';
 import validate from 'validate.js';
+import { setLoading } from 'redux/actions/app';
+import { NotificationManager } from 'react-notifications';
+import * as API from 'services/api';
 
 const useStyles = makeStyles((theme) => ({
   container: {},
   field: {
     marginBottom: theme.spacing(1.5),
+  },
+  status: {
+    margin: `${theme.spacing(1.5)}px 0`,
+  },
+  asset: {
+    display: 'block',
   },
 }));
 
@@ -56,13 +62,16 @@ const Project = () => {
       description: '',
       thumbnail: null,
       video: null,
-      sourceCode: null,
+      source: null,
+      changed: false,
     },
     touched: {},
     errors: {},
   });
   const [isCreate, setIsCreate] = useState(true);
   const [projectId, setProjectId] = useState('');
+
+  const [status, setStatus] = useState('');
 
   const dispatch = useDispatch();
   const router = useRouter();
@@ -74,13 +83,91 @@ const Project = () => {
       setIsCreate(false);
       setProjectId(id);
       // load project info
+      dispatch(setLoading(true));
+      API.getProject(id)
+        .then(({ id, userId, ...projectData }) => {
+          dispatch(setLoading(false));
+          setFormState((prevFormState) => ({
+            ...prevFormState,
+            values: { ...projectData, changed: false },
+          }));
+        })
+        .catch((err) => {
+          dispatch(setLoading(false));
+          NotificationManager.warning(err.message);
+          router.history.push('/projects');
+        });
     } else {
       // create
     }
   }, []);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
+
+    const keys = ['thumbnail', 'video', 'source'];
+    const payload = [];
+
+    keys.forEach((key) => {
+      const fileValue = formState.values[key];
+      if (fileValue !== null && typeof fileValue !== 'string') {
+        payload.push({
+          name: fileValue.name,
+          type: fileValue.type,
+          public: key !== 'source',
+        });
+      }
+    });
+
+    const projectPayload = {
+      title: formState.values.title,
+      description: formState.values.description,
+    };
+
+    try {
+      dispatch(setLoading(true));
+
+      // get aws s3 presigned urls for uploading files
+      setStatus('Getting Presigned Urls');
+      const presignedUrls = await API.createProjectPresignedUrls({
+        data: payload,
+      });
+      // upload files
+      for (let index = 0; index < keys.length; index += 1) {
+        const key = keys[index];
+        const fileValue = formState.values[key];
+        if (fileValue !== null && typeof fileValue !== 'string') {
+          // upload
+          projectPayload[key] = presignedUrls[index].fields.key;
+          setStatus(`Uploading ${fileValue.name} ...`);
+          await API.uploadFileToS3(presignedUrls[index], fileValue);
+        }
+      }
+      //
+
+      // create or update project
+      if (isCreate) {
+        // create
+        setStatus('Creating Project ...');
+        await API.createProject(projectPayload);
+        setStatus('');
+        dispatch(setLoading(false));
+        NotificationManager.success('Project is created successfully!');
+        router.history.push('/projects');
+      } else {
+        // update
+        setStatus('Updating Project ...');
+        await API.updateProduct(projectId, projectPayload);
+        setStatus('');
+        dispatch(setLoading(false));
+        NotificationManager.success('Project is updated successfully!');
+        router.history.push('/projects');
+      }
+    } catch (error) {
+      NotificationManager.warning(error.message);
+      dispatch(setLoading(false));
+      setStatus('');
+    }
   };
 
   const fieldChange = (event) => {
@@ -90,6 +177,7 @@ const Project = () => {
       values: {
         ...prevFormState.values,
         [event.target.name]: event.target.value,
+        changed: true,
       },
       touched: {
         ...prevFormState.touched,
@@ -104,6 +192,7 @@ const Project = () => {
       values: {
         ...prevFormState.values,
         [key]: file,
+        changed: true,
       },
       touched: {
         ...prevFormState.touched,
@@ -119,15 +208,16 @@ const Project = () => {
     let errors = validate(formState.values, schema);
 
     if (formState.values.thumbnail === null) {
-      errors.thumbnail = ['Please select thumbnail of video'];
+      errors = { ...errors, thumbnail: ['Please select thumbnail of video'] };
     }
     if (formState.values.video === null) {
-      errors.video = ['Please select video'];
+      errors = { ...errors, video: ['Please select video'] };
     }
-    if (formState.values.sourceCode === null) {
-      errors.sourceCode = [
-        'Please compress your source code and select zip file',
-      ];
+    if (formState.values.source === null) {
+      errors = {
+        ...errors,
+        source: ['Please compress your source code and select zip file'],
+      };
     }
 
     setFormState((prevFormState) => ({
@@ -148,7 +238,7 @@ const Project = () => {
             <TextField
               variant="outlined"
               name="title"
-              value={formState.title}
+              value={formState.values.title}
               onChange={fieldChange}
               fullWidth
               label="Title"
@@ -159,7 +249,7 @@ const Project = () => {
             <TextField
               variant="outlined"
               name="description"
-              value={formState.description}
+              value={formState.values.description}
               onChange={fieldChange}
               fullWidth
               label="Description"
@@ -177,7 +267,7 @@ const Project = () => {
               error={hasError('thumbnail')}
             >
               <FormLabel component="legend">Video Thumbnail</FormLabel>
-              <FormGroup>
+              <FormGroup className={classes.asset}>
                 <FileDropzone
                   acceptRule="image/*"
                   file={formState.values.thumbnail}
@@ -194,7 +284,7 @@ const Project = () => {
               error={hasError('video')}
             >
               <FormLabel component="legend">Video (*.mp4 only)</FormLabel>
-              <FormGroup>
+              <FormGroup className={classes.asset}>
                 <FileDropzone
                   acceptRule="video/mp4"
                   file={formState.values.video}
@@ -209,31 +299,37 @@ const Project = () => {
             <FormControl
               fullWidth
               className={classes.field}
-              error={hasError('sourceCode')}
+              error={hasError('source')}
             >
               <FormLabel component="legend">
                 Source Code (*.rar, *.zip only)
               </FormLabel>
-              <FormGroup>
+              <FormGroup className={classes.asset}>
                 <FileDropzone
                   acceptRule=".zip,.rar"
-                  file={formState.values.sourceCode}
-                  setFile={fileChange('sourceCode')}
+                  file={formState.values.source}
+                  setFile={fileChange('source')}
                 />
               </FormGroup>
-              {hasError('sourceCode') && (
-                <FormHelperText>
-                  {formState.errors.sourceCode[0]}
-                </FormHelperText>
+              {hasError('source') && (
+                <FormHelperText>{formState.errors.source[0]}</FormHelperText>
               )}
             </FormControl>
+
+            {status !== '' && (
+              <Typography className={classes.status}>{status}</Typography>
+            )}
 
             <Button
               fullWidth
               variant="contained"
               type="submit"
               size="large"
-              disabled={!formState.isValid}
+              disabled={
+                isCreate
+                  ? !formState.isValid
+                  : !formState.isValid || !formState.values.changed
+              }
             >
               {isCreate ? 'Create' : 'Update'}
             </Button>
